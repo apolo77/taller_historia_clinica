@@ -1,1 +1,1071 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EHR Medical Simulator - Historia Clínica & Evaluador CIE-11</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            200: '#bae0fd',
+                            300: '#7cc7fb',
+                            400: '#36a9f7',
+                            500: '#0c8de4',
+                            600: '#026fc2',
+                            700: '#03589f',
+                            800: '#074a83',
+                            900: '#0b3e6f',
+                            950: '#072749',
+                        },
+                        clinical: {
+                            50: '#f4f9fd',
+                            100: '#e8f3fb',
+                            500: '#1d72b8',
+                            600: '#155994',
+                            800: '#0d375c',
+                            900: '#09233c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-100 flex flex-col font-sans antialiased bg-slate-950">
 
+    <!-- HEADER PRINCIPAL - CLINICAL NAVY THEME -->
+    <header class="bg-gradient-to-r from-navy-950 via-navy-900 to-clinical-900 text-white border-b border-navy-800/60 sticky top-0 z-50 shadow-xl backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Branding -->
+                <div class="flex items-center space-x-3">
+                    <div class="p-2.5 bg-gradient-to-br from-navy-500 to-navy-700 rounded-xl shadow-lg shadow-navy-500/20 border border-navy-400/30">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-navy-100 to-navy-200">
+                                MED-EHR <span class="text-xs px-2 py-0.5 rounded-full bg-navy-500/20 text-navy-300 border border-navy-400/30 font-semibold">CIE-11</span>
+                            </h1>
+                        </div>
+                        <p class="text-xs text-navy-300 font-medium">Sistema de Historia Clínica Práctica & Bull; Medicina 3.er Semestre</p>
+                    </div>
+                </div>
+
+                <!-- Tabs de Navegación -->
+                <div class="flex bg-slate-900/80 p-1.5 rounded-xl border border-navy-800/80 shadow-inner">
+                    <button id="tab-student" onclick="switchView('student')" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all duration-200 flex items-center space-x-2 bg-navy-600 text-white shadow-md shadow-navy-600/30">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        <span>Vista Estudiante</span>
+                    </button>
+                    <button id="tab-teacher" onclick="switchView('teacher')" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all duration-200 flex items-center space-x-2 text-slate-400 hover:text-white hover:bg-navy-800/40">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        <span>Dashboard Docente</span>
+                        <span id="teacher-badge" class="ml-1 px-2 py-0.5 text-[10px] bg-navy-500 text-white font-bold rounded-full">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- NOTIFICACIONES TOAST -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- ========================================== -->
+        <!-- VISTA 1: REGISTRO DE HISTORIA CLÍNICA     -->
+        <!-- ========================================== -->
+        <section id="view-student" class="space-y-6">
+            <form id="hc-form" onsubmit="handleFormSubmit(event)">
+                
+                <!-- CARD 1: IDENTIFICACIÓN DEL ESTUDIANTE Y CASO -->
+                <div class="bg-slate-900/90 rounded-2xl border border-navy-800/80 p-6 shadow-xl backdrop-blur-sm">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-8 h-8 rounded-xl bg-navy-500/20 text-navy-400 border border-navy-500/30 font-bold flex items-center justify-center text-xs">1</span>
+                            <div>
+                                <h2 class="text-base font-bold text-white">Identificación del Estudiante & Caso Simulado</h2>
+                                <p class="text-xs text-slate-400">Ingrese sus datos académicos para habilitar el registro individual</p>
+                            </div>
+                        </div>
+                        <span class="text-xs bg-navy-950 text-navy-300 border border-navy-700/60 px-3 py-1 rounded-full font-medium">Entorno de Práctica</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider mb-2">ID / Código Estudiantil *</label>
+                            <input type="text" id="student_id" required placeholder="Ej: 1002345678" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:ring-2 focus:ring-navy-500 focus:border-navy-500 outline-none transition text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider mb-2">Nombre Completo *</label>
+                            <input type="text" id="student_name" required placeholder="Ej: Dra. María Paula Gómez" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:ring-2 focus:ring-navy-500 focus:border-navy-500 outline-none transition text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider mb-2">Caso Clínico *</label>
+                            <select id="case_id" onchange="loadCaseDescription()" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:ring-2 focus:ring-navy-500 focus:border-navy-500 outline-none transition text-sm">
+                                <option value="">-- Seleccionar Caso --</option>
+                                <option value="caso_1">Caso 1: Síndrome Coronario Agudo (IAMSEST)</option>
+                                <option value="caso_2">Caso 2: Crisis Asmática Moderada-Grave</option>
+                                <option value="caso_3">Caso 3: Apendicitis Aguda (Abdomen Agudo)</option>
+                                <option value="caso_4">Caso 4: Infección de Vías Urinarias / Cistitis</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Banner Dinámico del Caso -->
+                    <div id="case-banner" class="hidden mt-5 p-4 rounded-xl bg-navy-950/80 border border-navy-800 text-sm">
+                        <div class="font-bold text-navy-300 mb-1 flex items-center gap-2" id="case-title">---</div>
+                        <p class="text-slate-300 text-xs leading-relaxed" id="case-desc">---</p>
+                    </div>
+                </div>
+
+                <!-- CARD 2: SIGNOS VITALES Y PARÁMETROS BIOMÉTRICOS -->
+                <div class="bg-slate-900/90 rounded-2xl border border-navy-800/80 p-6 shadow-xl backdrop-blur-sm">
+                    <div class="flex items-center space-x-3 border-b border-slate-800 pb-4 mb-5">
+                        <span class="w-8 h-8 rounded-xl bg-navy-500/20 text-navy-400 border border-navy-500/30 font-bold flex items-center justify-center text-xs">2</span>
+                        <div>
+                            <h2 class="text-base font-bold text-white">Signos Vitales y Parámetros Biométricos</h2>
+                            <p class="text-xs text-slate-400">Valores cuantitativos examinados durante la simulación</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-navy-600 transition">
+                            <label class="block text-xs font-bold text-navy-200 mb-1">FC (bpm)</label>
+                            <input type="number" id="v_fc" placeholder="60-100" min="30" max="250" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:ring-2 focus:ring-navy-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400">Freq. Cardíaca</span>
+                        </div>
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-navy-600 transition">
+                            <label class="block text-xs font-bold text-navy-200 mb-1">PA Sistólica</label>
+                            <input type="number" id="v_pas" placeholder="120" min="50" max="260" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:ring-2 focus:ring-navy-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400">mmHg</span>
+                        </div>
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-navy-600 transition">
+                            <label class="block text-xs font-bold text-navy-200 mb-1">PA Diastólica</label>
+                            <input type="number" id="v_pad" placeholder="80" min="30" max="150" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:ring-2 focus:ring-navy-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400">mmHg</span>
+                        </div>
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-navy-600 transition">
+                            <label class="block text-xs font-bold text-navy-200 mb-1">FR (rpm)</label>
+                            <input type="number" id="v_fr" placeholder="12-20" min="5" max="60" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:ring-2 focus:ring-navy-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400">Freq. Resp.</span>
+                        </div>
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-navy-600 transition">
+                            <label class="block text-xs font-bold text-navy-200 mb-1">SatO2 (%)</label>
+                            <input type="number" id="v_sato2" placeholder="95-100" min="50" max="100" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:ring-2 focus:ring-navy-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400">Oximetría</span>
+                        </div>
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-navy-600 transition">
+                            <label class="block text-xs font-bold text-navy-200 mb-1">Temp (°C)</label>
+                            <input type="number" step="0.1" id="v_temp" placeholder="36.5" min="30" max="43" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:ring-2 focus:ring-navy-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400">Axilar / Oral</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: SEMIOLOGÍA DEL DOLOR (ESQUEMA ALICIA) -->
+                <div class="bg-slate-900/90 rounded-2xl border border-navy-800/80 p-6 shadow-xl backdrop-blur-sm">
+                    <div class="flex items-center space-x-3 border-b border-slate-800 pb-4 mb-5">
+                        <span class="w-8 h-8 rounded-xl bg-navy-500/20 text-navy-400 border border-navy-500/30 font-bold flex items-center justify-center text-xs">3</span>
+                        <div>
+                            <h2 class="text-base font-bold text-white">Semiología del Dolor / Síntoma Principal (ALICIA)</h2>
+                            <p class="text-xs text-slate-400">Caracterización estructurada del motivo principal</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 mb-1">A - Aparición / Inicio</label>
+                            <select id="alicia_aparicion" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500">
+                                <option value="Súbito (segundos a minutos)">Súbito (segundos a minutos)</option>
+                                <option value="Agudo (pocas horas)">Agudo (pocas horas)</option>
+                                <option value="Subagudo (días)">Subagudo (días)</option>
+                                <option value="Insidioso / Crónico">Insidioso / Crónico</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 mb-1">L - Localización e Irradiación</label>
+                            <input type="text" id="alicia_localizacion" placeholder="Ej: Precordial opresivo irrad. a mandíbula" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 mb-1">I - Intensidad (Escala EVA 1-10)</label>
+                            <div class="flex items-center space-x-3 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+                                <input type="range" id="alicia_intensidad" min="0" max="10" value="5" oninput="document.getElementById('eva-val').innerText = this.value" class="w-full accent-navy-500">
+                                <span id="eva-val" class="font-extrabold text-sm bg-navy-600 text-white px-2.5 py-0.5 rounded-lg border border-navy-400/40 min-w-[28px] text-center">5</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 mb-1">C - Carácter / Tipo de Dolor</label>
+                            <select id="alicia_caracter" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500">
+                                <option value="Opresivo / Urente">Opresivo / Urente</option>
+                                <option value="Punzante / Pleurítico">Punzante / Pleurítico</option>
+                                <option value="Cólico / Espasmódico">Cólico / Espasmódico</option>
+                                <option value="Urente / Quemante">Urente / Quemante</option>
+                                <option value="Sordo / Gravativo">Sordo / Gravativo</option>
+                                <option value="Lacerante / Tenebrante">Lacerante / Tenebrante</option>
+                                <option value="No aplica / Sin dolor">No aplica / Sin dolor</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 mb-1">I - Agravantes / Atenuantes</label>
+                            <input type="text" id="alicia_atenuantes" placeholder="Ej: Aumenta con esfuerzo, calma con reposo" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-navy-200 mb-1">A - Acompañantes / Concomitantes</label>
+                            <input type="text" id="alicia_acompanantes" placeholder="Ej: Diaforesis, náuseas, disnea" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 4: REVISIÓN POR SISTEMAS -->
+                <div class="bg-slate-900/90 rounded-2xl border border-navy-800/80 p-6 shadow-xl backdrop-blur-sm">
+                    <div class="flex items-center space-x-3 border-b border-slate-800 pb-4 mb-5">
+                        <span class="w-8 h-8 rounded-xl bg-navy-500/20 text-navy-400 border border-navy-500/30 font-bold flex items-center justify-center text-xs">4</span>
+                        <div>
+                            <h2 class="text-base font-bold text-white">Revisión por Sistemas (Positivos Encontrados)</h2>
+                            <p class="text-xs text-slate-400">Marque los hallazgos semiológicos expresados por el paciente</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="flex items-center space-x-2.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer hover:border-navy-600 transition text-xs">
+                            <input type="checkbox" name="rev_sys" value="Cardiovascular: Palpitaciones / Soplo" class="rounded border-slate-700 bg-slate-900 text-navy-500 focus:ring-navy-500">
+                            <span class="text-slate-300">Cardio: Palpitaciones</span>
+                        </label>
+                        <label class="flex items-center space-x-2.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer hover:border-navy-600 transition text-xs">
+                            <input type="checkbox" name="rev_sys" value="Respiratorio: Disnea de esfuerzo" class="rounded border-slate-700 bg-slate-900 text-navy-500 focus:ring-navy-500">
+                            <span class="text-slate-300">Resp: Disnea de esfuerzo</span>
+                        </label>
+                        <label class="flex items-center space-x-2.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer hover:border-navy-600 transition text-xs">
+                            <input type="checkbox" name="rev_sys" value="Respiratorio: Sibilancias audibles" class="rounded border-slate-700 bg-slate-900 text-navy-500 focus:ring-navy-500">
+                            <span class="text-slate-300">Resp: Sibilancias</span>
+                        </label>
+                        <label class="flex items-center space-x-2.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer hover:border-navy-600 transition text-xs">
+                            <input type="checkbox" name="rev_sys" value="Gastrointestinal: Náuseas / Vómito" class="rounded border-slate-700 bg-slate-900 text-navy-500 focus:ring-navy-500">
+                            <span class="text-slate-300">GI: Náuseas / Vómito</span>
+                        </label>
+                        <label class="flex items-center space-x-2.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer hover:border-navy-600 transition text-xs">
+                            <input type="checkbox" name="rev_sys" value="Gastrointestinal: Irritación peritoneal" class="rounded border-slate-700 bg-slate-900 text-navy-500 focus:ring-navy-500">
+                            <span class="text-slate-300">GI: Blumberg / Peritoneal</span>
+                        </label>
+                        <label class="flex items-center space-x-2.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer hover:border-navy-600 transition text-xs">
+                            <input type="checkbox" name="rev_sys" value="Genitourinario: Disuria / Poliaquiuria" class="rounded border-slate-700 bg-slate-900 text-navy-500 focus:ring-navy-500">
+                            <span class="text-slate-300">GU: Disuria / Poliaquiuria</span>
+                        </label>
+                        <label class="flex items-center space-x-2.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer hover:border-navy-600 transition text-xs">
+                            <input type="checkbox" name="rev_sys" value="Constitucional: Fiebre / Escalofríos" class="rounded border-slate-700 bg-slate-900 text-navy-500 focus:ring-navy-500">
+                            <span class="text-slate-300">General: Fiebre</span>
+                        </label>
+                        <label class="flex items-center space-x-2.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer hover:border-navy-600 transition text-xs">
+                            <input type="checkbox" name="rev_sys" value="Vascular: Edema en miembros inferiores" class="rounded border-slate-700 bg-slate-900 text-navy-500 focus:ring-navy-500">
+                            <span class="text-slate-300">Vasc: Edema MMII</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CARD 5: ANAMNESIS & ENFERMEDAD ACTUAL -->
+                <div class="bg-slate-900/90 rounded-2xl border border-navy-800/80 p-6 shadow-xl backdrop-blur-sm space-y-4">
+                    <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                        <span class="w-8 h-8 rounded-xl bg-navy-500/20 text-navy-400 border border-navy-500/30 font-bold flex items-center justify-center text-xs">5</span>
+                        <div>
+                            <h2 class="text-base font-bold text-white">Redacción Clínica de Anamnesis</h2>
+                            <p class="text-xs text-slate-400">Desarrollo narrativo en lenguaje médico formal</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider">Motivo de Consulta *</label>
+                            <span class="text-[11px] text-slate-400">Entre comillas las palabras del paciente</span>
+                        </div>
+                        <input type="text" id="motivo_consulta" required placeholder='Ej: "Sentí una opresión en el pecho muy fuerte y falta de aire"' class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider">Enfermedad Actual (Cronológica y Detallada) *</label>
+                            <button type="button" onclick="insertTemplate('enfermedad_actual')" class="text-xs text-navy-400 hover:text-navy-300 font-semibold underline">Insertar Plantilla Guía</button>
+                        </div>
+                        <textarea id="enfermedad_actual" rows="4" required placeholder="Paciente de X años de edad que ingresa por cuadro clínico de X horas de evolución..." class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500 custom-scrollbar leading-relaxed"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider mb-1.5">Antecedentes Personales y Familiares</label>
+                        <textarea id="antecedentes" rows="2" placeholder="Patológicos, Quirúrgicos, Alérgicos, Farmacológicos..." class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500 custom-scrollbar"></textarea>
+                    </div>
+                </div>
+
+                <!-- CARD 6: BUSCADOR CIE-11 & IMPRESIÓN DIAGNÓSTICA -->
+                <div class="bg-slate-900/90 rounded-2xl border border-navy-800/80 p-6 shadow-xl backdrop-blur-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-8 h-8 rounded-xl bg-navy-500/20 text-navy-400 border border-navy-500/30 font-bold flex items-center justify-center text-xs">6</span>
+                            <div>
+                                <h2 class="text-base font-bold text-white">Impresión Diagnóstica (Codificación CIE-11)</h2>
+                                <p class="text-xs text-slate-400">Buscador y asignación de diagnósticos según la 11.ª Revisión de la OMS</p>
+                            </div>
+                        </div>
+                        <span class="text-xs bg-navy-950 border border-navy-700/80 text-navy-300 px-3 py-1 rounded-full font-bold">CIE-11 OMS</span>
+                    </div>
+
+                    <!-- Buscador CIE-11 en Tiempo Real -->
+                    <div class="relative">
+                        <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider mb-1.5">Buscador de Diagnósticos CIE-11</label>
+                        <div class="relative">
+                            <input type="text" id="cie11_search" oninput="searchCIE11()" placeholder="Buscar por código (ej: BA41) o término (ej: infarto, neumonía, apendicitis)..." class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:ring-2 focus:ring-navy-500 outline-none transition">
+                            <svg class="w-5 h-5 text-slate-400 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+
+                        <!-- Dropdown de Resultados -->
+                        <div id="cie11_results" class="hidden absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-navy-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-30 divide-y divide-slate-800">
+                        </div>
+                    </div>
+
+                    <!-- Lista de Diagnósticos Seleccionados -->
+                    <div>
+                        <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider mb-2">Diagnósticos Asignados al Caso</label>
+                        <div id="selected_diagnoses" class="min-h-[80px] p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                            <p id="empty_dx_msg" class="text-xs text-slate-500 italic text-center py-3">No hay diagnósticos CIE-11 seleccionados. Utilice el buscador superior.</p>
+                        </div>
+                    </div>
+
+                    <!-- Juicio Clínico / Análisis Razonado -->
+                    <div>
+                        <label class="block text-xs font-bold text-navy-200 uppercase tracking-wider mb-1.5">Juicio Clínico / Análisis Propedéutico *</label>
+                        <textarea id="impresion_diagnostica" rows="3" required placeholder="Sustente el razonamiento clínico de los diagnósticos seleccionados..." class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-navy-500 custom-scrollbar"></textarea>
+                    </div>
+                </div>
+
+                <!-- BARRA DE ACCIONES DE ENVÍO -->
+                <div class="bg-gradient-to-r from-slate-900 via-navy-950 to-slate-900 border border-navy-800 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl">
+                    <div class="flex items-center space-x-3 text-xs text-slate-300">
+                        <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span>El registro se sincronizará automáticamente para revisión docente inmediata.</span>
+                    </div>
+
+                    <div class="flex items-center space-x-3 w-full sm:w-auto">
+                        <button type="button" onclick="clearForm()" class="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition text-xs font-bold w-1/2 sm:w-auto">
+                            Limpiar
+                        </button>
+                        <button type="submit" class="px-7 py-2.5 rounded-xl bg-gradient-to-r from-navy-600 to-navy-500 hover:from-navy-500 hover:to-navy-400 text-white font-bold transition text-xs shadow-lg shadow-navy-600/30 flex items-center justify-center space-x-2 w-1/2 sm:w-auto border border-navy-400/30">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                            <span>Guardar Historia Clínica</span>
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VISTA 2: DASHBOARD DOCENTE DE EVALUACIÓN   -->
+        <!-- ========================================== -->
+        <section id="view-teacher" class="hidden space-y-6">
+            
+            <!-- TOOLBAR DOCENTE -->
+            <div class="bg-slate-900/90 rounded-2xl border border-navy-800/80 p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        Dashboard de Evaluación Docente
+                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-navy-500/20 text-navy-300 border border-navy-500/30">Revisión Rápida</span>
+                    </h2>
+                    <p class="text-xs text-slate-400">Filtrado por casos, cálculo automático de completitud y matriz de evaluación</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="filter-case" onchange="renderTeacherTable()" class="px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-medium">
+                        <option value="ALL">Todos los Casos</option>
+                        <option value="caso_1">Caso 1: Coronario</option>
+                        <option value="caso_2">Caso 2: Asma</option>
+                        <option value="caso_3">Caso 3: Apendicitis</option>
+                        <option value="caso_4">Caso 4: IVU / Cistitis</option>
+                    </select>
+
+                    <button onclick="exportToCSV()" class="px-4 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition border border-navy-500/30">
+                        <svg class="w-4 h-4 text-navy-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Exportar CSV</span>
+                    </button>
+
+                    <button onclick="exportToJSON()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
+                        <span>Backup JSON</span>
+                    </button>
+
+                    <button onclick="clearAllData()" class="px-3.5 py-2 bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/60 rounded-xl text-xs font-semibold transition">
+                        Limpiar Todo
+                    </button>
+                </div>
+            </div>
+
+            <!-- GRID PRINCIPAL DE REVISIÓN -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- LISTADO DE ESTUDIANTES (PANEL IZQUIERDO) -->
+                <div class="lg:col-span-5 bg-slate-900/90 rounded-2xl border border-navy-800/80 overflow-hidden flex flex-col h-[750px] shadow-xl">
+                    <div class="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase text-navy-200 tracking-wider">Estudiantes Entregados</span>
+                        <span id="record-count" class="text-xs bg-navy-900 text-navy-300 border border-navy-700 font-bold px-2.5 py-0.5 rounded-full">0 registros</span>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto custom-scrollbar divide-y divide-slate-800/60" id="teacher-records-list">
+                        <!-- Carga dinámica -->
+                    </div>
+                </div>
+
+                <!-- PANEL DETALLE Y RÚBRICA (PANEL DERECHO) -->
+                <div class="lg:col-span-7 bg-slate-900/90 rounded-2xl border border-navy-800/80 flex flex-col h-[750px] overflow-hidden shadow-xl" id="evaluation-detail-panel">
+                    <div class="h-full flex flex-col items-center justify-center p-8 text-center text-slate-500">
+                        <svg class="w-16 h-16 mb-3 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <p class="font-bold text-slate-400 text-sm">Seleccione un estudiante del listado</p>
+                        <p class="text-xs text-slate-500 mt-1 max-w-sm">Podrá visualizar la historia clínica redactada, la codificación CIE-11 y aplicar la evaluación rápida.</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-800/80 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            Simulador EHR de Historia Clínica &bull; Integración CIE-11 OMS &bull; Facultad de Medicina
+        </div>
+    </footer>
+
+    <!-- LOGICA JAVASCRIPT -->
+    <script>
+        // ==========================================
+        // BASE DE DATOS CIE-11 LOCAL (FRECUENTES)
+        // ==========================================
+        const CIE11_DATABASE = [
+            { code: "BA41.Z", title: "Infarto agudo del miocardio, sin especificación" },
+            { code: "BA00", title: "Hipertensión esencial (Primaria)" },
+            { code: "CA23.0", title: "Asma bronquial con exacerbación aguda" },
+            { code: "DB10.0", title: "Apendicitis aguda con peritonitis local" },
+            { code: "GC08.0", title: "Cistitis aguda / Infección de vías urinarias" },
+            { code: "5A11", title: "Diabetes mellitus tipo 2" },
+            { code: "CA22.0", title: "Enfermedad pulmonar obstructiva crónica (EPOC)" },
+            { code: "CA40.0", title: "Neumonía bacteriana no especificada" },
+            { code: "8A80.0", title: "Cefalea de tipo tensional aguda" },
+            { code: "6A71", title: "Trastorno de ansiedad generalizada" },
+            { code: "DA01.0", title: "Enfermedad por reflujo gastroesofágico (ERGE)" },
+            { code: "DA60.0", title: "Síndrome de intestino irritable" },
+            { code: "FA01.0", title: "Osteoartritis primaria de rodilla" },
+            { code: "1B10.0", title: "Tuberculosis pulmonar" },
+            { code: "GA00.0", title: "Insuficiencia renal aguda" },
+            { code: "BC81.3", title: "Accidente cerebrovascular isquémico agudo" },
+            { code: "FB56.0", title: "Lumbago agudo sin ciática" }
+        ];
+
+        const CLINICAL_CASES = {
+            "caso_1": {
+                title: "Caso 1: Síndrome Coronario Agudo (IAMSEST)",
+                desc: "Paciente masculino de 58 años, fumador e hipertenso, consulta por dolor retroesternal opresivo de 2h de evolución, EVA 9/10, irradiado a brazo izquierdo, con diaforesis profusa."
+            },
+            "caso_2": {
+                title: "Caso 2: Crisis Asmática Moderada-Grave",
+                desc: "Paciente femenina de 21 años con antecedente de asma, consulta por disnea progresiva de inicio súbito tras exposición a alérgeno hace 3 horas. Sibilancias bilaterales."
+            },
+            "caso_3": {
+                title: "Caso 3: Apendicitis Aguda (Abdomen Agudo)",
+                desc: "Paciente masculino de 19 años. Inicia dolor epigástrico sordo de 14h que migra a fosa ilíaca derecha en las últimas 6h. Presenta anorexia, febrícula y signo de Blumberg positivo."
+            },
+            "caso_4": {
+                title: "Caso 4: Infección de Vías Urinarias (Cistitis Aguda)",
+                desc: "Paciente femenina de 28 años que consulta por disuria marcada, poliaquiuria, tenesmo vesical y dolor suprapúbico de 24 horas de evolución. Fiebre de 37.9°C."
+            }
+        };
+
+        const LOCAL_STORAGE_KEY = "med_ehr_cie11_records_v2";
+        let activeSelectedDiagnoses = [];
+
+        // ==========================================
+        // INICIALIZACIÓN Y NAVEGACIÓN
+        // ==========================================
+        document.addEventListener("DOMContentLoaded", () => {
+            updateBadgeCount();
+            renderTeacherTable();
+        });
+
+        function switchView(viewName) {
+            const studentView = document.getElementById("view-student");
+            const teacherView = document.getElementById("view-teacher");
+            const tabStudent = document.getElementById("tab-student");
+            const tabTeacher = document.getElementById("tab-teacher");
+
+            if (viewName === 'student') {
+                studentView.classList.remove("hidden");
+                teacherView.classList.add("hidden");
+                tabStudent.className = "px-4 py-2 rounded-lg font-semibold text-xs transition-all duration-200 flex items-center space-x-2 bg-navy-600 text-white shadow-md shadow-navy-600/30";
+                tabTeacher.className = "px-4 py-2 rounded-lg font-semibold text-xs transition-all duration-200 flex items-center space-x-2 text-slate-400 hover:text-white hover:bg-navy-800/40";
+            } else {
+                studentView.classList.add("hidden");
+                teacherView.classList.remove("hidden");
+                tabTeacher.className = "px-4 py-2 rounded-lg font-semibold text-xs transition-all duration-200 flex items-center space-x-2 bg-navy-600 text-white shadow-md shadow-navy-600/30";
+                tabStudent.className = "px-4 py-2 rounded-lg font-semibold text-xs transition-all duration-200 flex items-center space-x-2 text-slate-400 hover:text-white hover:bg-navy-800/40";
+                renderTeacherTable();
+            }
+        }
+
+        function loadCaseDescription() {
+            const caseId = document.getElementById("case_id").value;
+            const caseBanner = document.getElementById("case-banner");
+            const caseTitle = document.getElementById("case-title");
+            const caseDesc = document.getElementById("case-desc");
+
+            if (caseId && CLINICAL_CASES[caseId]) {
+                caseTitle.innerText = CLINICAL_CASES[caseId].title;
+                caseDesc.innerText = CLINICAL_CASES[caseId].desc;
+                caseBanner.classList.remove("hidden");
+            } else {
+                caseBanner.classList.add("hidden");
+            }
+        }
+
+        function insertTemplate(fieldId) {
+            const elem = document.getElementById(fieldId);
+            if (fieldId === 'enfermedad_actual') {
+                elem.value = "Paciente de [Edad] años de edad, sexo [Masculino/Femenino], quien ingresa remitido/por sus propios medios al servicio de urgencias por cuadro clínico de [Tiempo] de evolución caracterizado por [Síntoma principal], acompañado de [Acompañantes]. Refiere que el cuadro aumenta con [Agravantes] y disminuye con [Atenuantes]. Niega otros síntomas asociados.";
+            }
+        }
+
+        // ==========================================
+        // LÓGICA BUSCADOR CIE-11
+        // ==========================================
+        function searchCIE11() {
+            const query = document.getElementById("cie11_search").value.toLowerCase().trim();
+            const resultsContainer = document.getElementById("cie11_results");
+
+            if (query.length < 2) {
+                resultsContainer.classList.add("hidden");
+                return;
+            }
+
+            const matches = CIE11_DATABASE.filter(item => 
+                item.code.toLowerCase().includes(query) || 
+                item.title.toLowerCase().includes(query)
+            );
+
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-400 italic text-center">No se encontraron diagnósticos CIE-11 coincidentes</div>`;
+            } else {
+                resultsContainer.innerHTML = matches.map(item => `
+                    <div onclick="addDiagnosis('${item.code}', '${escapeHtml(item.title)}')" class="p-3 hover:bg-navy-800/60 cursor-pointer transition flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-navy-300 text-xs mr-2">[${item.code}]</span>
+                            <span class="text-xs text-white">${escapeHtml(item.title)}</span>
+                        </div>
+                        <span class="text-[10px] bg-navy-600/40 text-navy-200 border border-navy-500/30 px-2 py-0.5 rounded-md font-semibold">+ Agregar</span>
+                    </div>
+                `).join("");
+            }
+
+            resultsContainer.classList.remove("hidden");
+        }
+
+        function addDiagnosis(code, title) {
+            if (activeSelectedDiagnoses.some(d => d.code === code)) {
+                showToast("Este diagnóstico ya fue agregado", "amber");
+                return;
+            }
+
+            const isFirst = activeSelectedDiagnoses.length === 0;
+            activeSelectedDiagnoses.push({
+                code: code,
+                title: title,
+                type: isFirst ? 'Principal' : 'Secundario'
+            });
+
+            renderSelectedDiagnoses();
+            document.getElementById("cie11_search").value = "";
+            document.getElementById("cie11_results").classList.add("hidden");
+        }
+
+        function removeDiagnosis(code) {
+            activeSelectedDiagnoses = activeSelectedDiagnoses.filter(d => d.code !== code);
+            if (activeSelectedDiagnoses.length > 0 && !activeSelectedDiagnoses.some(d => d.type === 'Principal')) {
+                activeSelectedDiagnoses[0].type = 'Principal';
+            }
+            renderSelectedDiagnoses();
+        }
+
+        function setDiagnosisType(code, type) {
+            if (type === 'Principal') {
+                activeSelectedDiagnoses.forEach(d => d.type = 'Secundario');
+            }
+            const dx = activeSelectedDiagnoses.find(d => d.code === code);
+            if (dx) dx.type = type;
+            renderSelectedDiagnoses();
+        }
+
+        function renderSelectedDiagnoses() {
+            const container = document.getElementById("selected_diagnoses");
+            const emptyMsg = document.getElementById("empty_dx_msg");
+
+            if (activeSelectedDiagnoses.length === 0) {
+                container.innerHTML = `<p id="empty_dx_msg" class="text-xs text-slate-500 italic text-center py-3">No hay diagnósticos CIE-11 seleccionados. Utilice el buscador superior.</p>`;
+                return;
+            }
+
+            container.innerHTML = activeSelectedDiagnoses.map(dx => `
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-navy-800 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-extrabold text-navy-400 bg-navy-950 border border-navy-700/60 px-2 py-0.5 rounded-lg text-[11px]">[${dx.code}]</span>
+                        <span class="text-white font-medium">${escapeHtml(dx.title)}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <select onchange="setDiagnosisType('${dx.code}', this.value)" class="px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-[10px] font-bold text-navy-200">
+                            <option value="Principal" ${dx.type === 'Principal' ? 'selected' : ''}>Principal</option>
+                            <option value="Secundario" ${dx.type === 'Secundario' ? 'selected' : ''}>Secundario</option>
+                        </select>
+                        <button type="button" onclick="removeDiagnosis('${dx.code}')" class="text-red-400 hover:text-red-300 p-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // ==========================================
+        // ALMACENAMIENTO Y ENVÍO
+        // ==========================================
+        function getStoredRecords() {
+            try {
+                return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveRecordsToStorage(records) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(records));
+            updateBadgeCount();
+        }
+
+        function updateBadgeCount() {
+            const records = getStoredRecords();
+            document.getElementById("teacher-badge").innerText = records.length;
+        }
+
+        function calculateCompleteness(record) {
+            let fields = 0;
+            let filled = 0;
+
+            const check = (val) => {
+                fields++;
+                if (val && String(val).trim() !== '') filled++;
+            };
+
+            check(record.student.id);
+            check(record.student.name);
+            check(record.case_id);
+            check(record.vitals.fc);
+            check(record.vitals.pas);
+            check(record.vitals.pad);
+            check(record.vitals.fr);
+            check(record.vitals.sato2);
+            check(record.vitals.temp);
+            check(record.alicia.localizacion);
+            check(record.text_records.motivo_consulta);
+            check(record.text_records.enfermedad_actual);
+            check(record.text_records.impresion_diagnostica);
+
+            fields++;
+            if (record.cie11_diagnoses && record.cie11_diagnoses.length > 0) filled++;
+
+            return Math.round((filled / fields) * 100);
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            if (activeSelectedDiagnoses.length === 0) {
+                if (!confirm("No ha seleccionado ningún diagnóstico del CIE-11. ¿Desea continuar de todos modos?")) {
+                    return;
+                }
+            }
+
+            const selectedRevSys = Array.from(document.querySelectorAll('input[name="rev_sys"]:checked')).map(cb => cb.value);
+
+            const newRecord = {
+                id: 'HC-' + Date.now(),
+                timestamp: new Date().toISOString(),
+                student: {
+                    id: document.getElementById("student_id").value.trim(),
+                    name: document.getElementById("student_name").value.trim()
+                },
+                case_id: document.getElementById("case_id").value,
+                vitals: {
+                    fc: parseInt(document.getElementById("v_fc").value),
+                    pas: parseInt(document.getElementById("v_pas").value),
+                    pad: parseInt(document.getElementById("v_pad").value),
+                    fr: parseInt(document.getElementById("v_fr").value),
+                    sato2: parseInt(document.getElementById("v_sato2").value),
+                    temp: parseFloat(document.getElementById("v_temp").value)
+                },
+                alicia: {
+                    aparicion: document.getElementById("alicia_aparicion").value,
+                    localizacion: document.getElementById("alicia_localizacion").value,
+                    intensidad: document.getElementById("alicia_intensidad").value,
+                    caracter: document.getElementById("alicia_caracter").value,
+                    atenuantes: document.getElementById("alicia_atenuantes").value,
+                    acompanantes: document.getElementById("alicia_acompanantes").value
+                },
+                revision_sistemas: selectedRevSys,
+                cie11_diagnoses: activeSelectedDiagnoses,
+                text_records: {
+                    motivo_consulta: document.getElementById("motivo_consulta").value.trim(),
+                    enfermedad_actual: document.getElementById("enfermedad_actual").value.trim(),
+                    antecedentes: document.getElementById("antecedentes").value.trim(),
+                    impresion_diagnostica: document.getElementById("impresion_diagnostica").value.trim()
+                },
+                evaluation: {
+                    score: 0,
+                    completed: false,
+                    criteria: { vitals_ok: false, alicia_ok: false, cie11_ok: false },
+                    feedback: ""
+                }
+            };
+
+            newRecord.completeness = calculateCompleteness(newRecord);
+
+            const records = getStoredRecords();
+            const existingIndex = records.findIndex(r => r.student.id === newRecord.student.id && r.case_id === newRecord.case_id);
+            
+            if (existingIndex >= 0) {
+                if (!confirm("Ya existe un registro para este estudiante y caso. ¿Desea actualizarlo?")) return;
+                records[existingIndex] = newRecord;
+            } else {
+                records.unshift(newRecord);
+            }
+
+            saveRecordsToStorage(records);
+            showToast("Historia clínica guardada exitosamente");
+            clearForm();
+        }
+
+        function clearForm() {
+            document.getElementById("hc-form").reset();
+            document.getElementById("case-banner").classList.add("hidden");
+            document.getElementById("eva-val").innerText = "5";
+            activeSelectedDiagnoses = [];
+            renderSelectedDiagnoses();
+        }
+
+        // ==========================================
+        // PANEL DOCENTE DE EVALUACIÓN
+        // ==========================================
+        let selectedRecordId = null;
+
+        function renderTeacherTable() {
+            const recordsListElem = document.getElementById("teacher-records-list");
+            const filterCase = document.getElementById("filter-case").value;
+            let records = getStoredRecords();
+
+            if (filterCase !== "ALL") {
+                records = records.filter(r => r.case_id === filterCase);
+            }
+
+            document.getElementById("record-count").innerText = `${records.length} entregas`;
+
+            if (records.length === 0) {
+                recordsListElem.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">Sin registros de estudiantes para este filtro</div>`;
+                return;
+            }
+
+            recordsListElem.innerHTML = records.map(r => {
+                const isSelected = r.id === selectedRecordId;
+                const caseTitle = CLINICAL_CASES[r.case_id] ? CLINICAL_CASES[r.case_id].title.split(':')[0] : r.case_id;
+                const dateStr = new Date(r.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                return `
+                    <div onclick="selectRecordForEvaluation('${r.id}')" class="p-4 cursor-pointer hover:bg-slate-800/60 transition ${isSelected ? 'bg-navy-950/90 border-l-4 border-navy-500' : ''}">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="font-bold text-white text-sm">${escapeHtml(r.student.name)}</span>
+                            <span class="text-[10px] text-slate-400">${dateStr}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+                            <span>ID: <strong class="text-navy-300">${escapeHtml(r.student.id)}</strong></span>
+                            <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px]">${caseTitle}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-[11px] ${r.evaluation.completed ? 'text-emerald-400 font-semibold' : 'text-amber-400'}">
+                                ${r.evaluation.completed ? `✓ Calificado (${r.evaluation.score}/5)` : '⏳ Pendiente'}
+                            </span>
+                            <span class="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800">
+                                Llenado: ${r.completeness || 0}%
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function selectRecordForEvaluation(recordId) {
+            selectedRecordId = recordId;
+            renderTeacherTable();
+            const records = getStoredRecords();
+            const record = records.find(r => r.id === recordId);
+            if (!record) return;
+
+            const detailPanel = document.getElementById("evaluation-detail-panel");
+            const caseInfo = CLINICAL_CASES[record.case_id] || { title: record.case_id };
+
+            detailPanel.innerHTML = `
+                <div class="p-4 bg-navy-950 border-b border-navy-800 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-base text-white">${escapeHtml(record.student.name)} (ID: ${escapeHtml(record.student.id)})</h3>
+                        <p class="text-xs text-navy-300">${caseInfo.title}</p>
+                    </div>
+                    <span class="text-xs bg-navy-900 border border-navy-700 text-navy-200 px-3 py-1 rounded-full font-medium">
+                        Completitud: ${record.completeness || 0}%
+                    </span>
+                </div>
+
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                    
+                    <!-- RÚBRICA DE EVALUACIÓN -->
+                    <div class="bg-navy-950/80 border border-navy-700/80 rounded-2xl p-4 space-y-3 shadow-lg">
+                        <div class="flex items-center justify-between border-b border-navy-800 pb-2">
+                            <h4 class="font-bold text-navy-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                                Evaluador Rápido Docente
+                            </h4>
+                            <span class="text-xs font-bold text-white">Nota: <span id="eval-score-display" class="text-base font-black text-navy-300">${record.evaluation.score}</span> / 5.0</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                            <label class="flex items-center space-x-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 cursor-pointer">
+                                <input type="checkbox" id="crit_vitals" ${record.evaluation.criteria?.vitals_ok ? 'checked' : ''} onchange="updateRubricScore()" class="rounded bg-slate-900 border-slate-700 text-navy-500">
+                                <span class="text-slate-300">Signos Vitales (1.5 pts)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 cursor-pointer">
+                                <input type="checkbox" id="crit_alicia" ${record.evaluation.criteria?.alicia_ok ? 'checked' : ''} onchange="updateRubricScore()" class="rounded bg-slate-900 border-slate-700 text-navy-500">
+                                <span class="text-slate-300">Anamnesis ALICIA (1.5 pts)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 cursor-pointer">
+                                <input type="checkbox" id="crit_cie11" ${record.evaluation.criteria?.cie11_ok ? 'checked' : ''} onchange="updateRubricScore()" class="rounded bg-slate-900 border-slate-700 text-navy-500">
+                                <span class="text-slate-300">Juicio / CIE-11 (2.0 pts)</span>
+                            </label>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-navy-300 uppercase mb-1">Feedback al Estudiante</label>
+                            <textarea id="eval_feedback" rows="2" placeholder="Comentarios de mejora semiológica..." class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:ring-1 focus:ring-navy-500">${escapeHtml(record.evaluation.feedback || '')}</textarea>
+                        </div>
+
+                        <button onclick="saveEvaluation('${record.id}')" class="w-full py-2 bg-navy-600 hover:bg-navy-500 text-white font-bold rounded-xl text-xs transition shadow-md">
+                            Guardar Nota y Retroalimentación
+                        </button>
+                    </div>
+
+                    <!-- REVISIÓN CLÍNICA DETALLADA -->
+                    <div class="space-y-4 text-xs">
+                        
+                        <!-- Diagnósticos CIE-11 -->
+                        <div>
+                            <h5 class="font-bold text-navy-300 uppercase text-[11px] mb-2 border-b border-slate-800 pb-1">Diagnósticos CIE-11 Codificados</h5>
+                            <div class="space-y-1.5">
+                                ${(record.cie11_diagnoses || []).map(d => `
+                                    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                                        <span class="font-bold text-navy-300">[${d.code}] ${escapeHtml(d.title)}</span>
+                                        <span class="text-[10px] px-2 py-0.5 rounded ${d.type === 'Principal' ? 'bg-navy-600 text-white font-bold' : 'bg-slate-800 text-slate-400'}">${d.type}</span>
+                                    </div>
+                                `).join('') || '<p class="text-slate-500 italic">Sin diagnósticos seleccionados</p>'}
+                            </div>
+                        </div>
+
+                        <!-- Signos Vitales -->
+                        <div>
+                            <h5 class="font-bold text-navy-300 uppercase text-[11px] mb-2 border-b border-slate-800 pb-1">Signos Vitales</h5>
+                            <div class="grid grid-cols-6 gap-2 text-center">
+                                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800"><span class="block text-[10px] text-slate-400">FC</span><strong class="text-sm text-white">${record.vitals.fc}</strong></div>
+                                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800"><span class="block text-[10px] text-slate-400">PA</span><strong class="text-sm text-white">${record.vitals.pas}/${record.vitals.pad}</strong></div>
+                                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800"><span class="block text-[10px] text-slate-400">FR</span><strong class="text-sm text-white">${record.vitals.fr}</strong></div>
+                                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800"><span class="block text-[10px] text-slate-400">SatO2</span><strong class="text-sm text-white">${record.vitals.sato2}%</strong></div>
+                                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800"><span class="block text-[10px] text-slate-400">Temp</span><strong class="text-sm text-white">${record.vitals.temp}°C</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Motivo y Enfermedad Actual -->
+                        <div>
+                            <h5 class="font-bold text-navy-300 uppercase text-[11px] mb-1">Motivo de Consulta</h5>
+                            <p class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-200 italic font-medium">"${escapeHtml(record.text_records.motivo_consulta)}"</p>
+                        </div>
+
+                        <div>
+                            <h5 class="font-bold text-navy-300 uppercase text-[11px] mb-1">Enfermedad Actual</h5>
+                            <p class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-slate-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(record.text_records.enfermedad_actual)}</p>
+                        </div>
+
+                        <div>
+                            <h5 class="font-bold text-navy-300 uppercase text-[11px] mb-1">Juicio Clínico y Sustentación</h5>
+                            <p class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-200 whitespace-pre-wrap">${escapeHtml(record.text_records.impresion_diagnostica)}</p>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateRubricScore() {
+            const v = document.getElementById("crit_vitals")?.checked ? 1.5 : 0;
+            const a = document.getElementById("crit_alicia")?.checked ? 1.5 : 0;
+            const c = document.getElementById("crit_cie11")?.checked ? 2.0 : 0;
+            const total = (v + a + c).toFixed(1);
+            document.getElementById("eval-score-display").innerText = total;
+        }
+
+        function saveEvaluation(recordId) {
+            const records = getStoredRecords();
+            const record = records.find(r => r.id === recordId);
+            if (!record) return;
+
+            const v = document.getElementById("crit_vitals").checked;
+            const a = document.getElementById("crit_alicia").checked;
+            const c = document.getElementById("crit_cie11").checked;
+            const feedback = document.getElementById("eval_feedback").value;
+
+            const score = (v ? 1.5 : 0) + (a ? 1.5 : 0) + (c ? 2.0 : 0);
+
+            record.evaluation = {
+                score: score,
+                completed: true,
+                criteria: { vitals_ok: v, alicia_ok: a, cie11_ok: c },
+                feedback: feedback
+            };
+
+            saveRecordsToStorage(records);
+            renderTeacherTable();
+            showToast("Calificación guardada correctamente");
+        }
+
+        // ==========================================
+        // EXPORTACIÓN DE DATOS
+        // ==========================================
+        function exportToCSV() {
+            const records = getStoredRecords();
+            if (records.length === 0) {
+                alert("No hay historias clínicas registradas.");
+                return;
+            }
+
+            const headers = [
+                "ID_Estudiante", "Nombre", "Caso", "Fecha", "Completitud",
+                "FC", "PA_Sistolica", "PA_Diastolica", "FR", "SatO2", "Temp",
+                "Diagnosticos_CIE11", "Motivo_Consulta", "Enfermedad_Actual",
+                "Nota_Final", "Evaluado", "Retroalimentacion"
+            ];
+
+            const rows = records.map(r => {
+                const dxStr = (r.cie11_diagnoses || []).map(d => `${d.code}:${d.title}(${d.type})`).join(' | ');
+                return [
+                    `"${r.student.id}"`,
+                    `"${r.student.name}"`,
+                    `"${r.case_id}"`,
+                    `"${r.timestamp}"`,
+                    `${r.completeness || 0}%`,
+                    r.vitals.fc,
+                    r.vitals.pas,
+                    r.vitals.pad,
+                    r.vitals.fr,
+                    r.vitals.sato2,
+                    r.vitals.temp,
+                    `"${cleanForCSV(dxStr)}"`,
+                    `"${cleanForCSV(r.text_records.motivo_consulta)}"`,
+                    `"${cleanForCSV(r.text_records.enfermedad_actual)}"`,
+                    r.evaluation.score,
+                    r.evaluation.completed ? "SI" : "NO",
+                    `"${cleanForCSV(r.evaluation.feedback || '')}"`
+                ];
+            });
+
+            const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+            downloadFile(csvContent, `Historias_Clinicas_CIE11_${new Date().toISOString().slice(0,10)}.csv`, "text/csv;charset=utf-8;");
+        }
+
+        function exportToJSON() {
+            const records = getStoredRecords();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+            downloadFile(dataStr, `Backup_HC_CIE11_${new Date().toISOString().slice(0,10)}.json`, "application/json");
+        }
+
+        function clearAllData() {
+            if (confirm("¿Confirmar eliminación de TODOS los registros locales acumulados?")) {
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+                selectedRecordId = null;
+                renderTeacherTable();
+                document.getElementById("evaluation-detail-panel").innerHTML = `<div class="h-full flex items-center justify-center text-slate-500 text-xs">Registros vaciados.</div>`;
+                showToast("Datos borrados con éxito");
+            }
+        }
+
+        function cleanForCSV(str) {
+            if (!str) return "";
+            return str.replace(/"/g, '""').replace(/\n/g, ' ');
+        }
+
+        function downloadFile(content, fileName, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function showToast(message, color = "emerald") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = `bg-slate-900 border border-navy-700 text-white text-xs px-4 py-3 rounded-xl shadow-2xl pointer-events-auto flex items-center space-x-2 transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `
+                <div class="w-2 h-2 rounded-full ${color === 'amber' ? 'bg-amber-400' : 'bg-emerald-400'}"></div>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.remove("translate-y-2", "opacity-0"), 10);
+            setTimeout(() => {
+                toast.classList.add("opacity-0");
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
