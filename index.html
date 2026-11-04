@@ -65,18 +65,18 @@
             <div class="flex items-center justify-between h-16">
                 <!-- Branding -->
                 <div class="flex items-center space-x-3">
-                    <div class="p-2.5 bg-gradient-to-br from-navy-500 to-navy-700 rounded-xl shadow-lg shadow-navy-500/20 border border-navy-400/30">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                    </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h1 class="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-navy-100 to-navy-200">
-                                MED-EHR <span class="text-xs px-2 py-0.5 rounded-full bg-navy-500/20 text-navy-300 border border-navy-400/30 font-semibold">CIE-11</span>
+                            <h1 class="font-extrabold text-base sm:text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-navy-100 to-navy-200">
+                                Sistema de Práctica de Historia Clínica - Universidad Pontificia Bolivariana
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-navy-500/20 text-navy-300 border border-navy-400/30 font-semibold ml-1">CIE-11</span>
                             </h1>
                         </div>
-                        <p class="text-xs text-navy-300 font-medium">Sistema de Historia Clínica Práctica & Bull; Medicina 3.er Semestre</p>
+                        <p class="text-xs text-navy-300 font-medium flex items-center gap-2">
+                            <span>Medicina 3.er Semestre</span>
+                            <span class="text-slate-500">•</span>
+                            <span class="text-navy-400 font-semibold">Versión 2.0 (Actualizado: Noviembre 2026)</span>
+                        </p>
                     </div>
                 </div>
 
@@ -457,8 +457,13 @@
 
     <!-- FOOTER -->
     <footer class="bg-slate-950 border-t border-slate-800/80 py-4 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-            Simulador EHR de Historia Clínica &bull; Integración CIE-11 OMS &bull; Facultad de Medicina
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div>
+                Sistema de Práctica de Historia Clínica &bull; <strong class="text-slate-400">Universidad Pontificia Bolivariana</strong>
+            </div>
+            <div>
+                Integración CIE-11 OMS &bull; Facultad de Medicina &bull; <span class="text-navy-400 font-semibold">v2.0 (Nov. 2026)</span>
+            </div>
         </div>
     </footer>
 
